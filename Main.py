@@ -222,11 +222,7 @@ def run(cmd: str):
         for i in cmd:
             output += i + " "
             CodeError(f"Invalid symbol: {output}", "running").throw()
-            
-            
 
-
-   
 def runlines(code: str):
     """运行整个程序"""
     checkcode(code)
@@ -236,7 +232,11 @@ def checkcode(code: str):
     """检查语法错误"""
     result = 0
     info = ["line 0", "No error on syntax"]
-    # 进行逐行读取检查语法
+    # 进行逐行读取检查语法（目前仅查字符）
+    for line in code.split("\n"):
+        for char in line:
+            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/":
+                CodeError(f"Invalid character: {char}", info[0]).throw()
     return {"result": result, "info": tuple(info)}
 
 if __name__ == "__main__":
