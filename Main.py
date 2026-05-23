@@ -132,24 +132,100 @@ def definedCPT(cclass: type, name: str, value):
 # Tasks class
 class Task:
     def __init__(self, func: callable):
-        # 修复原代码截断问题，假设func是一个可调用对象
         if not callable(func):
-            raise TypeError("func must be callable")
+            InpyStuchError(f"The parameter func is not a callable object", "definedTask").throw()
         self.func = func
+        self.args = []
+    
+    def add(self, arg):
+        self.args.append(arg)
+    
+    def run(self):
+        self.func(self.args) # 内部函数必须接受一个列表形参
 
-# 主程序部分
+# MAIN
+
+# Task types
+def intro(args: list[Chapter]): # for test
+    """打印"""
+    """
+    args[0]: Chapter object
+    """
+    if isinstance(args[0], Chapter) and type(args[0]) != Chapter: # 必须是Chapter的子类对象
+        print(args[0].getvalue())
+    else:
+        ChapterError("Invalid Chapter object", "intro").throw()
+
+# symbols
+
+def create(args: list[str]):# for test
+    """创建Task/Chapter"""
+    """
+    args[0]: "create"
+    args[1]: "Task.xxx" or "Chapter.xxx"
+    args[2]: "xxx/XXX"
+    """
+
+    tasks_func = {
+        "intro": intro
+    }
+
+    chapters_func = {
+        "str": StrChapter,
+        "int": IntChapter,
+        "list": ListChapter,
+        "map": MapChapter
+    }
+
+    if not len(args) == 3:
+        output = ""
+        for i in args:
+            output += i + " "
+        CodeError(f"Invalid number of arguments:{output}", "Symbol.create").throw()
+    else:
+        types = args[1].split(".")
+        if types[0] not in ["Task", "Chapter"]:
+            CodeError("Invalid type of object", "Symbol.create").throw()
+        else:
+            if types[0] == "Task":
+                tasks[args[2]] = Task(func = tasks_func[types[1]] if types[1] in tasks_func else intro)
+            elif types[0] == "Chapter":
+                chapters[types[1]][types[2]] = chapters_func[types[1]](name = types[2])
+        
 
 # 初始化全局字典，避免 run 函数中引用未定义全局变量报错
-numdict = {}
-strdict = {}
-listdict = {}
-mapdict = {}
-strdict["lang"] = definedCPT(StrChapter, "lang", "StuchkutV1")
+chapters = {
+    "int": {},
+    "str": {},
+    "list": {},
+    "map": {}
+}
+chapters["str"]["lang"] = definedCPT(StrChapter, "lang", "StuchkutV1")
 
 def run(cmd: str):
     global numdict, strdict, listdict, mapdict
     """运行单行代码"""
-    pass # 占位符，实际逻辑待实现
+    cmd = cmd.split(" ")
+    syms = [
+        "create",
+    ]
+
+    args = []
+    func = print
+    code = cmd[0]
+    if code in syms:
+        func = tasks[code]
+        args = cmd[1:]
+        func(args)
+    else:
+        output = ""
+        for i in cmd:
+            output += i + " "
+            CodeError(f"Invalid symbol: {output}", "running").throw()
+            
+            
+
+
    
 def runlines(code: str):
     """运行整个程序"""
