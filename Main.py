@@ -4,7 +4,7 @@ By XiaohezAWA
 
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "XiaohezAWA"
 
 import sys
@@ -109,6 +109,7 @@ class MapChapter(Chapter):
         return(0, "Success")
 
 def definedCPT(cclass: type, name: str, value):
+    """返回定义后的Chapter对象(不添加索引)"""
     if issubclass(cclass, Chapter):
         if cclass == Chapter:
             ChapterError("The parameter cclass cannot be the Chapter class itself", "definedCPT").throw()
@@ -122,8 +123,48 @@ def definedCPT(cclass: type, name: str, value):
     else:
         ChapterError("Invalid class type for Chapter definition", "definedCPT").throw()
 
+def define_newCPT(cclass: type, name: str, value, return_value = False):
+    """定义新Chapter的标准方法"""
+    if issubclass(cclass, Chapter):
+        if cclass == Chapter:
+            ChapterError("The parameter cclass cannot be the Chapter class itself", "definedCPT").throw()
+        else:
+            cpt = cclass(name)
+            res = cpt.define(value)
+            if res[0] == -1:
+                ChapterError(res[1], "definedCPT_inPy").throw()
+            else:
+                chapters[cpt.gettype()][name] = cpt
+                chapters_index[name] = cpt.gettype()
+            if return_value:
+                return cpt
+            else:
+                return 0
+    else:
+        ChapterError("Invalid class type for Chapter definition", "defineCPT").throw()
+
+def getCPT(name: str):
+    """直接由Chapter名获取Chapter"""
+    if name in chapters_index:
+        return chapters[chapters_index[name]][name]
+    else:
+        ChapterError(f"Chapter \"{name}\" does not exist", "getCPT").throw()    
+
+def check_vars():
+    """消除重复名称Chapter"""
+    vaild_vars = []
+    for var in chapters_index.keys():
+        if var in vaild_vars:
+            for type in chapters.keys():
+                if type == chapters_index[var]:
+                    pass
+                else:
+                    if var in chapters[type].keys():
+                        del chapters[type][var]
+
 # Tasks class
 class Task:
+    """Task基础类"""
     def __init__(self, func: callable):
         if not callable(func):
             InpyStuchError(f"The parameter func is not a callable object", "definedTask").throw()
@@ -151,24 +192,13 @@ def intro(args: list[Chapter]):
 
 # symbols
 
-def create(args: list[str]):
+def sym_create(args: list[str]):
     """创建Task/Chapter"""
     """
     args[0]: "create"
     args[1]: "Task.xxx" or "Chapter.xxx"
     args[2]: "xxx/XXX"
     """
-
-    tasks_func = {
-        "intro": intro
-    }
-
-    chapters_func = {
-        "str": StrChapter,
-        "int": IntChapter,
-        "list": ListChapter,
-        "map": MapChapter
-    }
 
     global tasks, chapters
     if len(args) != 2:
@@ -186,28 +216,81 @@ def create(args: list[str]):
             elif types[0] == "Chapter":
                 chapters[types[1]][args[1]] = chapters_func[types[1]](name = args[1])
 
+def sym_run(args: list[Chapter]):
+    """运行Task"""
+    """
+    args[0]: Task Chapter
+    """
+    if len(args) != 1:
+        output = ""
+        for i in args:
+            output += i + " "
+        CodeError(f"Invalid number of arguments:{output}", "Symbol.run").throw()
+    if isinstance(args[0], Task):
+        args[0].run()
+    else:
+        ChapterError("Invalid Task object", "Symbol.run").throw()
+
+def sym_ready(args: list):
+    """将current_chapter放入某Task的形参列表"""
+    """
+    args[0]: Task name
+    """
+    if len(args) != 2:
+        output = ""
+        for i in args:
+            output += i + " "
+        CodeError(f"Invalid number of arguments:{output}", "Symbol.ready").throw()
+    else:
+        if args[0] in tasks.keys():
+            tasks[args[0]].add(args[1])
+        else:
+            ChapterError(f"Task \"{args[0]}\" does not exist", "Symbol.ready").throw()
+
+
+
+
 chapters = {
     "int": {},
     "str": {},
     "list": {},
     "map": {}
 }
-chapters["str"]["lang"] = definedCPT(StrChapter, "lang", "StuchkutV1")
+chapters_index = {
+
+}
 tasks = {}
-tasks["create"] = create
+
+
+tasks_func = {
+    "intro": intro,
+}
+
+chapters_func = {
+    "str": StrChapter,
+    "int": IntChapter,
+    "list": ListChapter,
+    "map": MapChapter
+}
+
+syms = {
+    "create": sym_create,
+    "run": sym_run,
+    "ready": sym_ready
+}
+
+define_newCPT(StrChapter, "lang", "StuchkutV0.2.0")
+current_chapter = getCPT("lang")
 
 def run(cmd: str):
     """运行单行代码"""
     cmd = cmd.split(" ")
-    syms = [
-        "create",
-    ]
 
     args = []
     func = print
     code = cmd[0]
-    if code in syms:
-        func = tasks[code]
+    if code in syms.keys():
+        func = syms[code]
         args = cmd[1:]
         func(args)
     else:
