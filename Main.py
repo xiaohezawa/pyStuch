@@ -162,6 +162,61 @@ def check_vars():
                     if var in chapters[type].keys():
                         del chapters[type][var]
 
+# manage when define
+def mg_str(value: str):
+    """处理字符串"""
+    if value.startswith("\"") and value.endswith("\""):
+        return value[1:-1]
+    else:
+        return value
+
+def mg_int(value: str):
+    """处理整数"""
+    try:
+        value = int(value)
+    except:
+        ChapterError("Invalid integer format", "mg_int").throw()
+        return int(value)
+
+def mg_list(value: str):
+    """处理列表"""
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
+        if value == "":
+            return []
+        else:
+            value = value.split(",")
+            for i in range(len(value)):
+                value[i] = mg_str(value[i])
+            return value
+    else:
+        ChapterError("Invalid list format", "mg_list").throw()
+
+def mg_map(value: str):
+    """处理字典"""
+    if value.startswith("{") and value.endswith("}"):
+        value = value[1:-1]
+        if value == "":
+            return {}
+        else:
+            value = value.split(",")
+            temp_dict = {}
+            for i in range(len(value)):
+                if ":" in value[i]:
+                    key, val = value[i].split(":")
+                    temp_dict[mg_str(key)] = mg_str(val)
+                else:
+                    ChapterError("Invalid map format", "mg_map").throw()
+    else:
+        ChapterError("Invalid map format", "mg_map").throw()
+
+mgs = {
+    "str": mg_str,
+    "int": mg_int,
+    "list": mg_list,
+    "map": mg_map
+}
+
 # Tasks class
 class Task:
     """Task基础类"""
@@ -175,7 +230,13 @@ class Task:
         self.args.append(arg)
     
     def run(self):
-        self.func(self.args)
+        resolved_args = []
+        for arg in self.args:
+            if isinstance(arg, str):
+                resolved_args.append(getCPT(arg) if arg in chapters_index else arg)
+            else:
+                resolved_args.append(arg)
+        self.func(resolved_args)
 
 # MAIN
 
@@ -189,6 +250,16 @@ def intro(args: list[Chapter]):
         print(args[0].value)
     else:
         ChapterError("Invalid Chapter object", "intro").throw()
+
+def cset(args: list):
+    """设置current_chapter的值"""
+    """
+    args[0]: new value
+    """
+    global current_chapter
+    ctype = current_chapter.gettype()
+    current_chapter.define(cpt_types[ctype](args[0]))
+
 
 # symbols
 
@@ -215,38 +286,57 @@ def sym_create(args: list[str]):
                 tasks[args[1]] = Task(func = tasks_func[types[1]] if types[1] in tasks_func else intro)
             elif types[0] == "Chapter":
                 chapters[types[1]][args[1]] = chapters_func[types[1]](name = args[1])
+                chapters_index[args[1]] = types[1]
 
 def sym_run(args: list[Chapter]):
     """运行Task"""
     """
     args[0]: Task Chapter
     """
-    if len(args) != 1:
-        output = ""
-        for i in args:
-            output += i + " "
-        CodeError(f"Invalid number of arguments:{output}", "Symbol.run").throw()
-    if isinstance(args[0], Task):
-        args[0].run()
+    task_name = args[0]
+    if task_name in tasks:
+        tasks[task_name].run()
     else:
-        ChapterError("Invalid Task object", "Symbol.run").throw()
+        ChapterError(f"Task \"{task_name}\" does not exist", "Symbol.run").throw()
+
 
 def sym_ready(args: list):
     """将current_chapter放入某Task的形参列表"""
     """
     args[0]: Task name
     """
-    if len(args) != 2:
-        output = ""
-        for i in args:
-            output += i + " "
-        CodeError(f"Invalid number of arguments:{output}", "Symbol.ready").throw()
+    task_name = args[0]
+    if task_name in tasks:
+        tasks[task_name].add(current_chapter)
     else:
-        if args[0] in tasks.keys():
-            tasks[args[0]].add(args[1])
-        else:
-            ChapterError(f"Task \"{args[0]}\" does not exist", "Symbol.ready").throw()
+        ChapterError(f"Task \"{task_name}\" does not exist", "Symbol.ready").throw()
 
+def sym_switch(args: list[Chapter]):
+    """切换current_chapter"""
+    """
+    args[0]: Chapter name
+    """
+    global current_chapter
+    chapter_name = args[0]
+    if chapter_name in chapters_index:
+        current_chapter = getCPT(chapter_name)
+    else:
+        ChapterError(f"Chapter \"{chapter_name}\" does not exist", "Symbol.switch").throw()
+
+def sym_go(args: list):
+    """将常量放入某Task的形参列表"""
+    """
+    args[0]: Task name
+    args[1]: constant type
+    args[2]: constant
+    """
+    task_name = args[0]
+    if not args[1] in cpt_types:
+        CodeError("Invalid constant type", "Symbol.go").throw()
+    if task_name in tasks:
+        tasks[task_name].add(mgs[args[1]](args[2]))
+    else:
+        ChapterError(f"Task \"{task_name}\" does not exist", "Symbol.go").throw()
 
 
 
@@ -259,11 +349,20 @@ chapters = {
 chapters_index = {
 
 }
+
+cpt_types = {
+    "str": str,
+    "int": int,
+    "list": list,
+    "map": dict
+}
+
 tasks = {}
 
 
 tasks_func = {
     "intro": intro,
+    "set": cset
 }
 
 chapters_func = {
@@ -276,7 +375,9 @@ chapters_func = {
 syms = {
     "create": sym_create,
     "run": sym_run,
-    "ready": sym_ready
+    "ready": sym_ready,
+    "switch": sym_switch,
+    "go": sym_go,
 }
 
 define_newCPT(StrChapter, "lang", "StuchkutV0.2.0")
@@ -307,14 +408,17 @@ def runlines(code: str):
     
 def checkcode(code: str):
     """检查语法错误"""
+    
     result = 0
     line_num = 1
     for line in code.split("\n"):
         for char in line:
-            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/: \t":
+            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/:\" \n":
                 CodeError(f"Invalid character: {char}", f"line {line_num}").throw()
         line_num += 1
-    return {"result": result, "info": ("line 0", "No error on syntax")}
+    return {"result": result, "info": ("line -1", "No CodeError")}
+
+
 
 if __name__ == "__main__":
     args = sys.argv

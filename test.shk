@@ -1,0 +1,8 @@
+create Task.intro INTROR
+create Chapter.str shower
+switch shower
+create Task.set SETTER
+go SETTER str "Helloworld"
+run SETTER
+ready INTROR
+run INTROR
