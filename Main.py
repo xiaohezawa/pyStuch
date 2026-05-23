@@ -226,7 +226,9 @@ def run(cmd: str):
 def runlines(code: str):
     """运行整个程序"""
     checkcode(code)
-    # 这里应该添加实际执行逻辑，目前仅检查
+    # 执行逻辑
+    for code in code.split("\n"):
+        run(code)
     
 def checkcode(code: str):
     """检查语法错误"""
@@ -235,8 +237,10 @@ def checkcode(code: str):
     # 进行逐行读取检查语法（目前仅查字符）
     for line in code.split("\n"):
         for char in line:
-            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/":
+            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/:":
                 CodeError(f"Invalid character: {char}", info[0]).throw()
+            else:
+                pass
     return {"result": result, "info": tuple(info)}
 
 if __name__ == "__main__":
