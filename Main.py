@@ -237,7 +237,7 @@ def checkcode(code: str):
     # 进行逐行读取检查语法（目前仅查字符）
     for line in code.split("\n"):
         for char in line:
-            if char not in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/:":
+            if char not in " AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789()_.-+=&|/:":
                 CodeError(f"Invalid character: {char}", info[0]).throw()
             else:
                 pass
