@@ -1,0 +1,39 @@
+create Chapter.int i
+create Task.intro INTROR
+create Task.set SETR
+create Task.smlr SMLR
+create Task.add ADDR
+
+^ i = 0
+switch i
+go SETR int 0
+run SETR
+
+^ 输出 i
+switch i
+ready INTROR
+run INTROR
+
+^ i = i + 1
+ready ADDR
+go ADDR int 1
+run ADDR
+
+^ 条件 i < 10
+ready SMLR
+go SMLR int 10
+
+startstamp stp
+    ready INTROR
+    run INTROR
+
+    ready ADDR
+    go ADDR int 1
+    run ADDR
+
+    ready SMLR
+    go SMLR int 10
+    ifstamp SMLR stp
+endstamp
+
+backstamp stp
