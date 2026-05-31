@@ -3,7 +3,7 @@ Stuchkut language
 By XiaohezAWA
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "XiaohezAWA"
 
 import sys
@@ -267,7 +267,7 @@ mgs = {
 
 # Task
 class Task:
-    def __init__(self, func: callable):
+    def __init__(self, func: callable, is_condition=False):
         if not callable(func):
             InpyStuchError(
                 "The parameter func is not a callable object",
@@ -275,6 +275,7 @@ class Task:
             ).throw()
         self.func = func
         self.args = []
+        self.is_condition = is_condition  # 是否是条件判断任务
 
     def add(self, arg):
         self.args.append(arg)
@@ -286,8 +287,14 @@ class Task:
                 resolved.append(getCPT(arg))
             else:
                 resolved.append(arg)
-        self.func(resolved)
+        if self.is_condition:
+            return self.func(resolved)  # 条件任务返回布尔值
+        else:
+            self.func(resolved)  # 普通任务不返回值
+            return None
 
+    def clear(self):
+        self.args.clear()
 
 # Built-in tasks
 def intro(args):
@@ -395,19 +402,25 @@ def bigr(args):
     a, b = args
     expect_type(a, "int")
     expect_type(b, "int")
-    current_chapter.define(int(a.value > b.value))
+    a = int(a.value) if type(a) == IntChapter else a
+    b = int(b.value) if type(b) == IntChapter else b
+    return a > b
 
 def smlr(args):
     a, b = args
     expect_type(a, "int")
     expect_type(b, "int")
-    current_chapter.define(int(a.value < b.value))
+    a = int(a.value) if type(a) == IntChapter else a
+    b = int(b.value) if type(b) == IntChapter else b
+    return a < b
 
 def eqal(args):
     a, b = args
     expect_type(a, "int")
     expect_type(b, "int")
-    current_chapter.define(int(a.value == b.value))
+    a = int(a.value) if type(a) == IntChapter else a
+    b = int(b.value) if type(b) == IntChapter else b
+    return a == b
 
 
 # Symbols
@@ -425,7 +438,12 @@ def sym_create(args):
     # Task.xxx
     if full_type.startswith("Task."):
         task_name = full_type.split(".", 1)[1]
-        tasks[name] = Task(tasks_func.get(task_name, intro))
+        # 判断是否是条件任务
+        is_condition = task_name in ["bigr", "smlr", "eqal"]
+        if task_name in tasks_func:
+            tasks[name] = Task(tasks_func[task_name], is_condition)
+        else:
+            ChapterError(f"Unknown task type: {task_name}", "Symbol.create").throw()
         return
 
     # Chapter.int / Chapter.str ...
@@ -502,33 +520,38 @@ def sym_startstamp(args):
     name = args[0]
     recording = name
     stamps[name] = []
+    sym_onlystamp(args)
+    sym_backstamp(args)
+
+def sym_stamp_apd(code, recording):
+    stamps[recording].append(code + "\n")
 
 def sym_onlystamp(args):
-    global recording
-    recording = args[0]
-    stamps.setdefault(recording, [])
+    global current_line,crcode,recording
+    name = args[0]
+    recording = name
+    code = crcode
+    current_line += 1
+    while code.split("\n")[current_line].strip() != "endstamp":
+        sym_stamp_apd(code.split("\n")[current_line], name)
+        current_line += 1
 
 def sym_endstamp(args):
-    global recording
-    recording = None
+    pass
 
 def sym_backstamp(args):
-    name = args[0]
-    if name not in stamps:
-        StampError(f"Stamp '{name}' does not exist", "backstamp").throw()
-
-    lines = stamps[name]
-    pc = 0
-    while pc < len(lines):
-        run(lines[pc])
-        pc += 1
+    name = args[0] if type(args) == list else args
+    runstamp(stamps[name])
 
 def sym_ifstamp(args):
     cond_task, stamp_name = args
-    tasks[cond_task].run()
-    result = current_chapter.value
-    if result == 1:
-        sym_backstamp([stamp_name])
+    if tasks[cond_task].run():
+        sym_backstamp(stamp_name)
+
+def sym_clrtsk(args):
+    taskname = args[0]
+    if taskname in tasks:
+        tasks[taskname].args.clear()
 
 # Runtime tables
 chapters = {
@@ -594,11 +617,11 @@ syms.update({
     "onlystamp": sym_onlystamp,
     "endstamp": sym_endstamp,
     "ifstamp": sym_ifstamp,
+    "clrtsk": sym_clrtsk,
 })
 
 stamps = {}  # name -> list[str]
 recording = None
-stamp_pc = {}  # stamp_name -> index
 
 define_newCPT(StrChapter, "lang", "StuchkutV0.2.0")
 current_chapter = getCPT("lang")
@@ -615,10 +638,6 @@ def run(cmd: str):
     if not cmd:
         return
 
-    if recording is not None:
-        stamps[recording].append(cmd)
-        return
-
     cmd = cmd.split()
     code = cmd[0]
 
@@ -627,12 +646,15 @@ def run(cmd: str):
     else:
         CodeError(f"Invalid symbol: {' '.join(cmd)}", "running").throw()
 
+def runstamp(stampcode: list[str]):
+    for line in stampcode:
+        run(line)
 
 def runlines(code: str):
     global current_line
-    
-    checkcode(code)
-    for line in code.split("\n"):
+    lines = code.splitlines()
+    while current_line < len(lines):
+        line = lines[current_line]
         current_line += 1
         line = line.strip()
         if line:
@@ -654,6 +676,7 @@ if __name__ == "__main__":
         path = sys.argv[1]
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                runlines(f.read())
+                crcode = f.read()
+                runlines(crcode)
         else:
             print(f"Error: File '{path}' not found.")

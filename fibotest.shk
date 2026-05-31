@@ -1,39 +1,39 @@
+^ i = 0
+
 create Chapter.int i
 create Task.intro INTROR
 create Task.set SETR
-create Task.smlr SMLR
 create Task.add ADDR
+create Task.smlr SMLR
 
-^ i = 0
+^ init
 switch i
 go SETR int 0
 run SETR
 
-^ 输出 i
-switch i
+^ print
 ready INTROR
 run INTROR
 
-^ i = i + 1
-ready ADDR
-go ADDR int 1
-run ADDR
-
-^ 条件 i < 10
-ready SMLR
-go SMLR int 10
-
-startstamp stp
-    ready INTROR
-    run INTROR
+startstamp LOOP
+    clrtsk INTROR
+    clrtsk ADDR
+    clrtsk SMLR
 
     ready ADDR
     go ADDR int 1
     run ADDR
 
+    ready INTROR
+    run INTROR
+
+    ^ 比较 i 和 10
+    switch i
     ready SMLR
     go SMLR int 10
-    ifstamp SMLR stp
+    run SMLR
+
+    ifstamp SMLR LOOP
 endstamp
 
-backstamp stp
+backstamp LOOP
