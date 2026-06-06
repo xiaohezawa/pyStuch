@@ -1,39 +1,36 @@
-^ i = 0
+^ 简单的计数器
+create Chapter.int counter
+create Task.intro print_task
+create Task.set set_task
+create Task.add add_task
+create Task.smlr compare_task
 
-create Chapter.int i
-create Task.intro INTROR
-create Task.set SETR
-create Task.add ADDR
-create Task.smlr SMLR
+^ 初始化计数器为0
+switch counter
+go set_task int 0
+run set_task
 
-^ init
-switch i
-go SETR int 0
-run SETR
-
-^ print
-ready INTROR
-run INTROR
+^ 打印初始值
+ready print_task
+run print_task
 
 startstamp LOOP
-    clrtsk INTROR
-    clrtsk ADDR
-    clrtsk SMLR
-
-    ready ADDR
-    go ADDR int 1
-    run ADDR
-
-    ready INTROR
-    run INTROR
-
-    ^ 比较 i 和 10
-    switch i
-    ready SMLR
-    go SMLR int 10
-    run SMLR
-
-    ifstamp SMLR LOOP
+    ^ 清理任务参数
+    clrtsk compare_task
+    clrtsk add_task
+    clrtsk print_task
+    
+    ^ 计数器加1
+    ready add_task
+    go add_task int 1
+    run add_task
+    
+    ^ 打印计数器
+    ready print_task
+    run print_task
+    
+    ^ 比较计数器是否小于10
+    ready compare_task
+    go compare_task int 10
+    ifstamp compare_task LOOP
 endstamp
-
-backstamp LOOP

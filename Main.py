@@ -288,9 +288,12 @@ class Task:
             else:
                 resolved.append(arg)
         if self.is_condition:
-            return self.func(resolved)  # 条件任务返回布尔值
+            result = self.func(resolved)  # 条件任务返回布尔值
+            self.args.clear()
+            return result
         else:
-            self.func(resolved)  # 普通任务不返回值
+            self.func(resolved)
+            self.args.clear()
             return None
 
     def clear(self):
@@ -516,25 +519,29 @@ def sym_go(args):
 
 
 def sym_startstamp(args):
-    global recording
+    global stamps,current_line
     name = args[0]
-    recording = name
-    stamps[name] = []
-    sym_onlystamp(args)
-    sym_backstamp(args)
-
-def sym_stamp_apd(code, recording):
-    stamps[recording].append(code + "\n")
+    stamps.update(
+        {
+            name: current_line + 1
+        }
+    )
 
 def sym_onlystamp(args):
-    global current_line,crcode,recording
+    global stamps,current_line,crcode
     name = args[0]
-    recording = name
-    code = crcode
-    current_line += 1
-    while code.split("\n")[current_line].strip() != "endstamp":
-        sym_stamp_apd(code.split("\n")[current_line], name)
-        current_line += 1
+    stamps.update(
+        {
+            name: current_line + 1
+        }
+    )
+    endstampcode = -1
+    lcode = crcode.split("\n")
+    for line in lcode[current_line + 1:]:
+        if line.strip() == "endstamp":
+            endstampcode = lcode.index(line)
+    current_line = endstampcode
+
 
 def sym_endstamp(args):
     pass
@@ -620,8 +627,7 @@ syms.update({
     "clrtsk": sym_clrtsk,
 })
 
-stamps = {}  # name -> list[str]
-recording = None
+stamps = {}  # name -> int(恢复stamp的行数)
 
 define_newCPT(StrChapter, "lang", "StuchkutV0.2.0")
 current_chapter = getCPT("lang")
@@ -646,9 +652,32 @@ def run(cmd: str):
     else:
         CodeError(f"Invalid symbol: {' '.join(cmd)}", "running").throw()
 
-def runstamp(stampcode: list[str]):
-    for line in stampcode:
-        run(line)
+def runstamp(stampcode: int):
+    global crcode, current_line
+    lines = crcode.split("\n")
+    end_line = -1
+    indent = 0
+    for i in range(stampcode, len(lines)):
+        line = lines[i].strip()
+        if line == "endstamp":
+            if indent == 0:
+                end_line = i
+                break
+            else:
+                indent -= 1
+        elif line.startswith("startstamp") or line.startswith("onlystamp"):
+            indent += 1
+    if end_line == -1:
+        StampError(f"Missing 'endstamp' for stamp starting at line {stampcode}", "runstamp").throw()
+        return
+    saved_line = current_line
+    for i in range(stampcode + 1, end_line):
+        line = lines[i]
+        current_line = i
+        if line.strip():
+            run(line)
+    current_line = saved_line
+
 
 def runlines(code: str):
     global current_line
