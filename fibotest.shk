@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ^ 简单的计数器
 create Chapter.int counter
 create Task.intro print_task
@@ -34,41 +33,4 @@ startstamp LOOP
     ready compare_task
     go compare_task int 10
     ifstamp compare_task LOOP
-=======
-^ 简单的计数器
-create Chapter.int counter
-create Task.intro print_task
-create Task.set set_task
-create Task.add add_task
-create Task.smlr compare_task
-
-^ 初始化计数器为0
-switch counter
-go set_task int 0
-run set_task
-
-^ 打印初始值
-ready print_task
-run print_task
-
-startstamp LOOP
-    ^ 清理任务参数
-    clrtsk compare_task
-    clrtsk add_task
-    clrtsk print_task
-    
-    ^ 计数器加1
-    ready add_task
-    go add_task int 1
-    run add_task
-    
-    ^ 打印计数器
-    ready print_task
-    run print_task
-    
-    ^ 比较计数器是否小于10
-    ready compare_task
-    go compare_task int 10
-    ifstamp compare_task LOOP
->>>>>>> af07789f954d6ccfaa5cebd301901a289788e2c2
 endstamp
