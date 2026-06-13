@@ -1,6 +1,6 @@
 # Stuchkut 语言
 > 因 XiaohezAWA 太闲了于是使用 Python 制作的新编程语言执行器
-当前版本：**0.3.0**（目前为半成品）
+当前版本：**1.0.0**
 
 ## 运行方式
 ### 环境要求：
@@ -84,11 +84,38 @@ run INTROR
 
 这就是一个 Helloworld 程序了。
 
+### 第三方库
+
+在`1.0.0`版本中，已经加入了`usepylib`关键字来导入一个特定的Python第三方库。
+**要求:**
+实现一个`getReg`接口
+
+```Python
+def getReg():
+    return {
+    "tasks": {
+        "egtask": xxx(callable)
+        }
+    "syms": {
+        "egsym": sym_xxx(callable)
+        }
+    }
+```
+
+**注意：所有task函数都必须有接受多个形参的列表，sym函数必须接受一个列表**
+
+#### 制作第三方库
+
+在程序导入时，解释器会调用指定第三方库的
+
 ### 方法
 
-####基础
+#### 基础
+
+`usepylib <lib>`: 导入一个stuch库（使用Python语言）。
 
 `intro[<Chapter.str>]`: 输出至命令行。
+
 `set[<Chapter> <value>]`: 改变 Chapter 的值。
 `create <type> <name>`: 创建新 Chapter/Task。
 `switch <Chapter>`: 改变 `current_chapter`。
