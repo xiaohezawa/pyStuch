@@ -287,7 +287,8 @@ mgs = {
 class Task:
     def __init__(self, func: callable, is_condition=False):
         if not callable(func):
-            try: func() except: pass
+            try: func() 
+            except: pass
             InpyStuchError(
                 "The parameter func is not a callable object",
                 "definedTask"
